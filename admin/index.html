@@ -82,7 +82,7 @@ dialog form{display:grid;gap:14px}
     <h1>Mizon admin panel</h1>
     <p>Videolarni boshqarish uchun parolni kiriting.</p>
     <form id="loginForm">
-      <div><label for="pw">Parol</label><input id="pw" type="password" autocomplete="current-password" required></div>
+      <div><label for="pw">Parol</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:500;font-size:14px;cursor:pointer"><input type="checkbox" id="showPw" style="width:18px;min-height:18px;height:18px">Parolni ko‘rsatish</label></div>
       <button class="btn btn-em" type="submit">Kirish</button>
       <div id="loginErr" class="err" hidden></div>
     </form>
@@ -177,6 +177,7 @@ dialog form{display:grid;gap:14px}
     api('POST','/api/login').then(function(){ sessionStorage.setItem(PW_KEY,pw); showApp(); })
       .catch(function(err){ msg($('loginErr'),err.message); });
   });
+  $('showPw').addEventListener('change',function(){ $('pw').type=this.checked?'text':'password'; });
   $('logout').addEventListener('click',function(){ sessionStorage.removeItem(PW_KEY); location.reload(); });
 
   /* --- mavzular --- */
