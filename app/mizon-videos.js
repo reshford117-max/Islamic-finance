@@ -35,6 +35,7 @@
 
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
   function topicName(sec, id) {
+    if (id === 'umumiy' || !id) { try { return secName(sec); } catch (e) { return sec === 'eco' ? 'Iqtisodiyot' : 'Islom moliyasi'; } }
     try { var tp = (TOPICS[sec] || []).filter(function (x) { return x.id === id; })[0]; return tp ? tr(tp.n) : ''; } catch (e) { return ''; }
   }
   function L(uz, ru, en) { try { return [uz, ru, en][LANGS.indexOf(lang)] || uz; } catch (e) { return uz; } }
@@ -58,7 +59,7 @@
   function grouped(sec, onlyTopic) {
     var list = (data || []).filter(function (v) { return v.sec === sec && (!onlyTopic || v.tp === onlyTopic); });
     if (!list.length) return '';
-    var order = (TOPICS[sec] || []).map(function (t) { return t.id; });
+    var order = ['umumiy', '_'].concat((TOPICS[sec] || []).map(function (t) { return t.id; }));
     var groups = {};
     list.forEach(function (v) { (groups[v.tp || '_'] = groups[v.tp || '_'] || []).push(v); });
     var keys = Object.keys(groups).sort(function (a, b) {
