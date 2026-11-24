@@ -43,10 +43,10 @@
   var PLAYI = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
 
   function card(v) {
-    return '<button class="vcard myt" data-act="ytplay" data-y="' + esc(v.yt) + '" data-t="' + esc(v.title) + '" data-s="' + esc(topicName(v.sec, v.tp)) + '">' +
+    return '<button class="vcard myt" data-act="ytplay" data-y="' + esc(v.yt) + '" data-t="' + esc(v.title) + '" data-s="' + esc(topicName(v.sec, v.tp) || v.tpName || '') + '">' +
       '<span class="thumb ' + (v.sec === 'eco' ? 'eco' : 'isl') + ' myt-th"><img src="https://i.ytimg.com/vi/' + esc(v.yt) + '/hqdefault.jpg" alt="" loading="lazy" onerror="this.remove()">' +
       '<span class="play">' + PLAYI + '</span></span>' +
-      '<b>' + esc(v.title) + '</b><small>' + esc(topicName(v.sec, v.tp) || v.author || '') + '</small></button>';
+      '<b>' + esc(v.title) + '</b><small>' + esc(topicName(v.sec, v.tp) || v.tpName || v.author || '') + '</small></button>';
   }
 
   function statusBox() {
@@ -66,7 +66,7 @@
       var ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
     });
     return keys.map(function (k) {
-      var name = topicName(sec, k) || L('Boshqa videolar', 'Другие видео', 'Other videos');
+      var name = topicName(sec, k) || groups[k][0].tpName || L('Boshqa videolar', 'Другие видео', 'Other videos');
       return '<div class="sechead"><h2>' + esc(name) + '</h2></div><div class="rail">' + groups[k].map(card).join('') + '</div>';
     }).join('');
   }

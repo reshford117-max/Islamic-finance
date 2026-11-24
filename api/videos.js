@@ -32,7 +32,8 @@ module.exports = async function handler(req, res) {
         title: String(body.title || (info && info.title) || 'Video').slice(0, 200),
         author: (info && info.author) || '',
         sec: SECTIONS.includes(body.sec) ? body.sec : 'isl',
-        tp: String(body.tp || '').slice(0, 40),
+        tp: String(body.tp || '').slice(0, 60),
+        tpName: String(body.tpName || '').slice(0, 80),
         createdAt: new Date().toISOString()
       };
       list.unshift(video);
@@ -51,7 +52,8 @@ module.exports = async function handler(req, res) {
         if (!v) return S.send(res, 404, { error: 'Video topilmadi' });
         if (body.title != null) v.title = String(body.title).slice(0, 200);
         if (SECTIONS.includes(body.sec)) v.sec = body.sec;
-        if (body.tp != null) v.tp = String(body.tp).slice(0, 40);
+        if (body.tp != null) v.tp = String(body.tp).slice(0, 60);
+        if (body.tpName != null) v.tpName = String(body.tpName).slice(0, 80);
       }
       await S.writeVideos(list);
       return S.send(res, 200, { videos: list });

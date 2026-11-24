@@ -108,7 +108,8 @@ dialog form{display:grid;gap:14px}
           </div>
           <div>
             <label for="tp">4. Mavzu</label>
-            <select id="tp"></select>
+            <input id="tp" list="tpList" autocomplete="off" placeholder="Mavzuni yozing yoki ro‘yxatdan tanlang">
+            <div class="hint">Ro‘yxatda bo‘lmasa, o‘zingiz yozing — yangi mavzu bo‘lib qo‘shiladi. Bo‘sh qolsa — umumiy.</div>
           </div>
         </div>
         <button class="btn btn-em" id="addBtn" type="submit">Videoni qo‘shish</button>
@@ -130,13 +131,14 @@ dialog form{display:grid;gap:14px}
   </main>
 </div>
 
+<datalist id="tpList"></datalist>
 <dialog id="editDlg">
   <form method="dialog" id="editForm">
     <h3 style="font-size:20px">Videoni tahrirlash</h3>
     <div><label for="eTitle">Nomi</label><input id="eTitle" maxlength="200" required></div>
     <div class="row2">
       <div><label for="eSec">Bo‘lim</label><select id="eSec"><option value="isl">Islom moliyasi</option><option value="eco">Iqtisodiyot</option></select></div>
-      <div><label for="eTp">Mavzu</label><select id="eTp"></select></div>
+      <div><label for="eTp">Mavzu</label><input id="eTp" list="tpList" autocomplete="off" placeholder="Mavzuni yozing yoki tanlang"></div>
     </div>
     <div class="dact"><button class="btn btn-line" value="cancel" type="button" id="eCancel">Bekor qilish</button><button class="btn btn-em" value="ok" type="submit">Saqlash</button></div>
   </form>
@@ -155,7 +157,15 @@ dialog form{display:grid;gap:14px}
   }
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
   function topicName(sec,id){var t=(TOPICS[sec]||[]).filter(function(x){return x[0]===id;})[0];return t?t[1]:'—';}
-  function fillTopics(sel,sec,val){sel.innerHTML=(TOPICS[sec]||[]).map(function(t){return '<option value="'+t[0]+'"'+(t[0]===val?' selected':'')+'>'+esc(t[1])+'</option>';}).join('');}
+  function customNames(sec){var seen={},out=[];videos.forEach(function(v){ if(v.sec===sec&&v.tpName&&!(TOPICS[sec]||[]).some(function(t){return t[0]===v.tp;})&&!seen[v.tpName]){seen[v.tpName]=1;out.push(v.tpName);} });return out;}
+  function fillTopics(sec){ $('tpList').innerHTML=(TOPICS[sec]||[]).map(function(t){return '<option value="'+esc(t[1])+'"></option>';}).join('')+customNames(sec).map(function(n){return '<option value="'+esc(n)+'"></option>';}).join(''); }
+  function slug(t){return 'c-'+t.toLowerCase().replace(/[‘’ʻʼ`']/g,'').replace(/[^a-z0-9а-яёўқғҳ]+/gi,'-').replace(/^-+|-+$/g,'').slice(0,50);}
+  function resolveTopic(sec,text){ text=(text||'').trim(); if(!text) return {tp:'umumiy',tpName:''};
+    var low=text.toLowerCase(), hit=(TOPICS[sec]||[]).filter(function(t){return t[1].toLowerCase()===low;})[0];
+    if(hit) return {tp:hit[0],tpName:''};
+    var prev=videos.filter(function(v){return v.sec===sec&&v.tpName&&v.tpName.toLowerCase()===low;})[0];
+    return prev?{tp:prev.tp,tpName:prev.tpName}:{tp:slug(text),tpName:text}; }
+  function topicLabel(v){ var t=(TOPICS[v.sec]||[]).filter(function(x){return x[0]===v.tp;})[0]; return t?t[1]:(v.tpName||'—'); }
   function ytId(u){var m=String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);return m?m[1]:(/^[\w-]{11}$/.test(u.trim())?u.trim():null);}
   function msg(el,text,ok){el.hidden=false;el.className=ok?'ok':'err';el.textContent=text;}
 
@@ -164,10 +174,12 @@ dialog form{display:grid;gap:14px}
   $('logout').addEventListener('click',toLogin);
   /* --- mavzular --- */
   fetch('/admin/topics.json').then(function(r){return r.json();}).then(function(t){
-    TOPICS=t; fillTopics($('tp'),'isl'); fillTopics($('eTp'),'isl');
+    TOPICS=t; fillTopics('isl');
   });
-  $('sec').addEventListener('change',function(){ fillTopics($('tp'),this.value); });
-  $('eSec').addEventListener('change',function(){ fillTopics($('eTp'),this.value); });
+  $('sec').addEventListener('change',function(){ fillTopics(this.value); $('tp').value=''; });
+  $('eSec').addEventListener('change',function(){ fillTopics(this.value); $('eTp').value=''; });
+  $('tp').addEventListener('focus',function(){ fillTopics($('sec').value); });
+  $('eTp').addEventListener('focus',function(){ fillTopics($('eSec').value); });
 
   /* --- havola ko'rinishi --- */
   var pvTimer;
@@ -186,9 +198,10 @@ dialog form{display:grid;gap:14px}
   /* --- qo'shish --- */
   $('addForm').addEventListener('submit',function(e){
     e.preventDefault(); var b=$('addBtn'); b.disabled=true; b.textContent='Qo‘shilmoqda…'; $('addMsg').hidden=true;
-    api('POST','/api/videos',{url:$('url').value,title:$('title').value.trim(),sec:$('sec').value,tp:$('tp').value})
+    var rt=resolveTopic($('sec').value,$('tp').value);
+    api('POST','/api/videos',{url:$('url').value,title:$('title').value.trim(),sec:$('sec').value,tp:rt.tp,tpName:rt.tpName})
       .then(function(j){ videos=j.videos; renderList(); msg($('addMsg'),'Video qo‘shildi. Ilovada bir daqiqa ichida ko‘rinadi.',true);
-        $('url').value=''; $('title').value=''; $('preview').classList.remove('show'); })
+        $('url').value=''; $('title').value=''; $('tp').value=''; $('preview').classList.remove('show'); })
       .catch(function(err){ msg($('addMsg'),err.message); })
       .then(function(){ b.disabled=false; b.textContent='Videoni qo‘shish'; });
   });
@@ -203,7 +216,7 @@ dialog form{display:grid;gap:14px}
     $('vlist').innerHTML=list.map(function(v){
       var i=videos.indexOf(v);
       return '<div class="vi"><img src="https://i.ytimg.com/vi/'+esc(v.yt)+'/mqdefault.jpg" alt="" onerror="this.style.visibility=\'hidden\'"><div class="tx"><b>'+esc(v.title)+'</b>'+
-        '<div class="tags"><span class="tag'+(v.sec==='eco'?' eco':'')+'">'+(v.sec==='eco'?'Iqtisodiyot':'Islom moliyasi')+'</span><span class="tag" style="background:#F1F4F2;color:#3B4641">'+esc(topicName(v.sec,v.tp))+'</span></div></div>'+
+        '<div class="tags"><span class="tag'+(v.sec==='eco'?' eco':'')+'">'+(v.sec==='eco'?'Iqtisodiyot':'Islom moliyasi')+'</span><span class="tag" style="background:#F1F4F2;color:#3B4641">'+esc(topicLabel(v))+'</span></div></div>'+
         '<div class="act">'+
         '<button class="ib" data-a="up" data-i="'+i+'" aria-label="Yuqoriga"'+(i===0?' disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>'+
         '<button class="ib" data-a="down" data-i="'+i+'" aria-label="Pastga"'+(i===videos.length-1?' disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'+
@@ -231,13 +244,14 @@ dialog form{display:grid;gap:14px}
     }
     if(a==='edit'){
       var v2=videos.filter(function(x){return x.id===b.dataset.id;})[0]; editId=v2.id;
-      $('eTitle').value=v2.title; $('eSec').value=v2.sec; fillTopics($('eTp'),v2.sec,v2.tp); $('editDlg').showModal();
+      $('eTitle').value=v2.title; $('eSec').value=v2.sec; fillTopics(v2.sec); $('eTp').value=(v2.tp==='umumiy'?'':topicLabel(v2)); $('editDlg').showModal();
     }
   });
   $('eCancel').addEventListener('click',function(){ $('editDlg').close(); });
   $('editForm').addEventListener('submit',function(e){
     e.preventDefault();
-    api('PUT','/api/videos',{id:editId,title:$('eTitle').value.trim(),sec:$('eSec').value,tp:$('eTp').value})
+    var et=resolveTopic($('eSec').value,$('eTp').value);
+    api('PUT','/api/videos',{id:editId,title:$('eTitle').value.trim(),sec:$('eSec').value,tp:et.tp,tpName:et.tpName})
       .then(function(r){ videos=r.videos; renderList(); $('editDlg').close(); }).catch(function(err){ alertBox(err.message); });
   });
   function alertBox(t){ alert(t); }
