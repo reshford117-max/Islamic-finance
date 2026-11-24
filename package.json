@@ -1,0 +1,6 @@
+{
+  "name": "mizon",
+  "private": true,
+  "description": "Mizon — sayt, admin panel va ilova uchun videolar API",
+  "engines": { "node": ">=18" }
+}
