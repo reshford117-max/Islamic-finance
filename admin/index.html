@@ -173,14 +173,14 @@ dialog form{display:grid;gap:14px}
   /* --- kirish --- */
   function showApp(){ $('loginView').hidden=true; $('appView').hidden=false; loadList(); }
   $('loginForm').addEventListener('submit',function(e){
-    e.preventDefault(); pw=$('pw').value; $('loginErr').hidden=true;
+    e.preventDefault(); pw=$('pw').value.trim(); $('loginErr').hidden=true;
     api('POST','/api/login').then(function(){ sessionStorage.setItem(PW_KEY,pw); showApp(); })
       .catch(function(err){ msg($('loginErr'),err.message); });
   });
   $('logout').addEventListener('click',function(){ sessionStorage.removeItem(PW_KEY); location.reload(); });
 
   /* --- mavzular --- */
-  fetch('topics.json').then(function(r){return r.json();}).then(function(t){
+  fetch('/admin/topics.json').then(function(r){return r.json();}).then(function(t){
     TOPICS=t; fillTopics($('tp'),'isl'); fillTopics($('eTp'),'isl');
   });
   $('sec').addEventListener('change',function(){ fillTopics($('tp'),this.value); });
