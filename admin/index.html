@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Mizon — Admin panel</title>
+<title>Mizon — Admin: kirish</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Onest:wght@400;500;600&family=Cormorant+Garamond:wght@700&display=swap" rel="stylesheet">
@@ -71,6 +71,7 @@ dialog::backdrop{background:rgba(10,30,22,.45)}
 dialog form{display:grid;gap:14px}
 .dact{display:flex;gap:10px;justify-content:flex-end}
 @media (max-width:640px){.row2{grid-template-columns:1fr}.vi{flex-wrap:wrap}.vi img{width:100%}.vi .act{width:100%;justify-content:flex-end}.preview{flex-direction:column;align-items:stretch}.preview img{width:100%}}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -89,178 +90,24 @@ dialog form{display:grid;gap:14px}
   </div>
 </section>
 
-<!-- ===== Asosiy panel ===== -->
-<div id="appView" hidden>
-  <header class="top"><div class="wrap">
-    <a class="brand" href="/">Mizon <small>Admin</small></a>
-    <button class="btn btn-line" id="logout" type="button">Chiqish</button>
-  </div></header>
-
-  <main class="wrap">
-    <section class="card">
-      <h2 style="font-size:22px;margin-bottom:4px">Yangi video qo‘shish</h2>
-      <p class="hint" style="margin:0 0 18px">YouTube havolasini qo‘ying — nomi va rasmi o‘zi chiqadi. Video ilovaning «Videolar» bo‘limida to‘liq ko‘rinadi.</p>
-      <form id="addForm" class="steps">
-        <div>
-          <label for="url">1. YouTube havolasi</label>
-          <input id="url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=..." required>
-          <div class="hint">youtube.com/watch, youtu.be, shorts va live havolalari ishlaydi.</div>
-        </div>
-        <div class="preview" id="preview">
-          <img id="pvImg" alt="">
-          <div><b id="pvTitle"></b><small id="pvAuthor"></small></div>
-        </div>
-        <div>
-          <label for="title">2. Video nomi</label>
-          <input id="title" type="text" maxlength="200" placeholder="Havoladan o‘zi olinadi, xohlasangiz o‘zgartiring">
-        </div>
-        <div class="row2">
-          <div>
-            <label for="sec">3. Bo‘lim</label>
-            <select id="sec"><option value="isl">Islom moliyasi</option><option value="eco">Iqtisodiyot</option></select>
-          </div>
-          <div>
-            <label for="tp">4. Mavzu</label>
-            <select id="tp"></select>
-          </div>
-        </div>
-        <button class="btn btn-em" id="addBtn" type="submit">Videoni qo‘shish</button>
-        <div id="addMsg" hidden></div>
-      </form>
-    </section>
-
-    <section>
-      <div class="listhead">
-        <h2 style="font-size:22px">Qo‘shilgan videolar <span id="count" style="color:var(--muted);font-weight:600"></span></h2>
-        <div class="filters" role="group" aria-label="Bo‘lim bo‘yicha">
-          <button class="chip" data-f="" aria-pressed="true">Hammasi</button>
-          <button class="chip" data-f="isl" aria-pressed="false">Islom moliyasi</button>
-          <button class="chip" data-f="eco" aria-pressed="false">Iqtisodiyot</button>
-        </div>
-      </div>
-      <div class="vlist" id="vlist"><div class="empty">Yuklanmoqda…</div></div>
-    </section>
-  </main>
-</div>
-
-<dialog id="editDlg">
-  <form method="dialog" id="editForm">
-    <h3 style="font-size:20px">Videoni tahrirlash</h3>
-    <div><label for="eTitle">Nomi</label><input id="eTitle" maxlength="200" required></div>
-    <div class="row2">
-      <div><label for="eSec">Bo‘lim</label><select id="eSec"><option value="isl">Islom moliyasi</option><option value="eco">Iqtisodiyot</option></select></div>
-      <div><label for="eTp">Mavzu</label><select id="eTp"></select></div>
-    </div>
-    <div class="dact"><button class="btn btn-line" value="cancel" type="button" id="eCancel">Bekor qilish</button><button class="btn btn-em" value="ok" type="submit">Saqlash</button></div>
-  </form>
-</dialog>
-
 <script>
 (function(){
-  var PW_KEY='mizon-admin-pw', pw=sessionStorage.getItem(PW_KEY)||'', videos=[], filter='', TOPICS={isl:[],eco:[]}, editId=null;
+  var PW_KEY='mizon-admin-pw';
   var $=function(id){return document.getElementById(id);};
-
-  function api(method, path, body){
-    return fetch(path,{method:method,headers:{'Content-Type':'application/json','x-admin-password':pw},body:body?JSON.stringify(body):undefined})
+  function check(pw){
+    return fetch('/api/login',{method:'POST',headers:{'x-admin-password':pw}})
       .then(function(r){return r.json().catch(function(){return {};}).then(function(j){ if(!r.ok) throw new Error(j.error||('Xato: '+r.status)); return j; });});
   }
-  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
-  function topicName(sec,id){var t=(TOPICS[sec]||[]).filter(function(x){return x[0]===id;})[0];return t?t[1]:'—';}
-  function fillTopics(sel,sec,val){sel.innerHTML=(TOPICS[sec]||[]).map(function(t){return '<option value="'+t[0]+'"'+(t[0]===val?' selected':'')+'>'+esc(t[1])+'</option>';}).join('');}
-  function ytId(u){var m=String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);return m?m[1]:(/^[\w-]{11}$/.test(u.trim())?u.trim():null);}
-  function msg(el,text,ok){el.hidden=false;el.className=ok?'ok':'err';el.textContent=text;}
-
-  /* --- kirish --- */
-  function showApp(){ $('loginView').hidden=true; $('appView').hidden=false; loadList(); }
-  $('loginForm').addEventListener('submit',function(e){
-    e.preventDefault(); pw=$('pw').value.trim(); $('loginErr').hidden=true;
-    api('POST','/api/login').then(function(){ sessionStorage.setItem(PW_KEY,pw); showApp(); })
-      .catch(function(err){ msg($('loginErr'),err.message); });
-  });
+  function go(){ location.replace('/admin/panel'); }
+  var saved=sessionStorage.getItem(PW_KEY);
+  if(saved){ check(saved).then(go).catch(function(){ sessionStorage.removeItem(PW_KEY); }); }
   $('showPw').addEventListener('change',function(){ $('pw').type=this.checked?'text':'password'; });
-  $('logout').addEventListener('click',function(){ sessionStorage.removeItem(PW_KEY); location.reload(); });
-
-  /* --- mavzular --- */
-  fetch('/admin/topics.json').then(function(r){return r.json();}).then(function(t){
-    TOPICS=t; fillTopics($('tp'),'isl'); fillTopics($('eTp'),'isl');
+  $('loginForm').addEventListener('submit',function(e){
+    e.preventDefault(); var pw=$('pw').value.trim(), b=this.querySelector('button[type=submit]'), err=$('loginErr');
+    err.hidden=true; b.disabled=true; b.textContent='Tekshirilmoqda…';
+    check(pw).then(function(){ sessionStorage.setItem(PW_KEY,pw); go(); })
+      .catch(function(x){ err.hidden=false; err.textContent=x.message; b.disabled=false; b.textContent='Kirish'; });
   });
-  $('sec').addEventListener('change',function(){ fillTopics($('tp'),this.value); });
-  $('eSec').addEventListener('change',function(){ fillTopics($('eTp'),this.value); });
-
-  /* --- havola ko'rinishi --- */
-  var pvTimer;
-  $('url').addEventListener('input',function(){
-    clearTimeout(pvTimer); var v=this.value, id=ytId(v);
-    if(!id){ $('preview').classList.remove('show'); return; }
-    $('pvImg').src='https://i.ytimg.com/vi/'+id+'/hqdefault.jpg'; $('pvTitle').textContent='Nomi olinmoqda…'; $('pvAuthor').textContent=''; $('preview').classList.add('show');
-    pvTimer=setTimeout(function(){
-      api('GET','/api/preview?url='+encodeURIComponent(v)).then(function(j){
-        $('pvTitle').textContent=j.title||'Nomi topilmadi — o‘zingiz yozing'; $('pvAuthor').textContent=j.author||'';
-        if(!$('title').value && j.title) $('title').value=j.title;
-      }).catch(function(){ $('pvTitle').textContent='Nomi topilmadi — o‘zingiz yozing'; });
-    },400);
-  });
-
-  /* --- qo'shish --- */
-  $('addForm').addEventListener('submit',function(e){
-    e.preventDefault(); var b=$('addBtn'); b.disabled=true; b.textContent='Qo‘shilmoqda…'; $('addMsg').hidden=true;
-    api('POST','/api/videos',{url:$('url').value,title:$('title').value.trim(),sec:$('sec').value,tp:$('tp').value})
-      .then(function(j){ videos=j.videos; renderList(); msg($('addMsg'),'Video qo‘shildi. Ilovada bir daqiqa ichida ko‘rinadi.',true);
-        $('url').value=''; $('title').value=''; $('preview').classList.remove('show'); })
-      .catch(function(err){ msg($('addMsg'),err.message); })
-      .then(function(){ b.disabled=false; b.textContent='Videoni qo‘shish'; });
-  });
-
-  /* --- ro'yxat --- */
-  function loadList(){ api('GET','/api/videos').then(function(j){ videos=j.videos||[]; renderList(); })
-    .catch(function(err){ $('vlist').innerHTML='<div class="empty">'+esc(err.message)+'</div>'; }); }
-  function renderList(){
-    var list=videos.filter(function(v){return !filter||v.sec===filter;});
-    $('count').textContent='('+videos.length+')';
-    if(!list.length){ $('vlist').innerHTML='<div class="empty">Hozircha video yo‘q. Yuqorida birinchi videoni qo‘shing.</div>'; return; }
-    $('vlist').innerHTML=list.map(function(v){
-      var i=videos.indexOf(v);
-      return '<div class="vi"><img src="https://i.ytimg.com/vi/'+esc(v.yt)+'/mqdefault.jpg" alt="" onerror="this.style.visibility=\'hidden\'"><div class="tx"><b>'+esc(v.title)+'</b>'+
-        '<div class="tags"><span class="tag'+(v.sec==='eco'?' eco':'')+'">'+(v.sec==='eco'?'Iqtisodiyot':'Islom moliyasi')+'</span><span class="tag" style="background:#F1F4F2;color:#3B4641">'+esc(topicName(v.sec,v.tp))+'</span></div></div>'+
-        '<div class="act">'+
-        '<button class="ib" data-a="up" data-i="'+i+'" aria-label="Yuqoriga"'+(i===0?' disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>'+
-        '<button class="ib" data-a="down" data-i="'+i+'" aria-label="Pastga"'+(i===videos.length-1?' disabled':'')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'+
-        '<a class="ib" href="https://www.youtube.com/watch?v='+esc(v.yt)+'" target="_blank" rel="noopener" aria-label="YouTube’da ko‘rish"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></a>'+
-        '<button class="ib" data-a="edit" data-id="'+v.id+'" aria-label="Tahrirlash"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>'+
-        '<button class="ib del" data-a="del" data-id="'+v.id+'" aria-label="O‘chirish"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>'+
-        '</div></div>';
-    }).join('');
-  }
-  document.querySelector('.filters').addEventListener('click',function(e){
-    var b=e.target.closest('.chip'); if(!b) return; filter=b.dataset.f;
-    this.querySelectorAll('.chip').forEach(function(c){c.setAttribute('aria-pressed',c===b);}); renderList();
-  });
-  $('vlist').addEventListener('click',function(e){
-    var b=e.target.closest('button.ib'); if(!b) return; var a=b.dataset.a;
-    if(a==='up'||a==='down'){
-      var i=+b.dataset.i, j=a==='up'?i-1:i+1; if(j<0||j>=videos.length) return;
-      var order=videos.map(function(v){return v.id;}); var t=order[i]; order[i]=order[j]; order[j]=t;
-      api('PUT','/api/videos',{order:order}).then(function(r){ videos=r.videos; renderList(); }).catch(function(err){ alertBox(err.message); });
-    }
-    if(a==='del'){
-      var v=videos.filter(function(x){return x.id===b.dataset.id;})[0];
-      if(!confirm('«'+v.title+'» videosini o‘chirasizmi? Ilovadan ham olib tashlanadi.')) return;
-      api('DELETE','/api/videos?id='+encodeURIComponent(v.id)).then(function(r){ videos=r.videos; renderList(); }).catch(function(err){ alertBox(err.message); });
-    }
-    if(a==='edit'){
-      var v2=videos.filter(function(x){return x.id===b.dataset.id;})[0]; editId=v2.id;
-      $('eTitle').value=v2.title; $('eSec').value=v2.sec; fillTopics($('eTp'),v2.sec,v2.tp); $('editDlg').showModal();
-    }
-  });
-  $('eCancel').addEventListener('click',function(){ $('editDlg').close(); });
-  $('editForm').addEventListener('submit',function(e){
-    e.preventDefault();
-    api('PUT','/api/videos',{id:editId,title:$('eTitle').value.trim(),sec:$('eSec').value,tp:$('eTp').value})
-      .then(function(r){ videos=r.videos; renderList(); $('editDlg').close(); }).catch(function(err){ alertBox(err.message); });
-  });
-  function alertBox(t){ alert(t); }
-
-  if(pw){ api('POST','/api/login').then(showApp).catch(function(){ sessionStorage.removeItem(PW_KEY); pw=''; }); }
 })();
 </script>
 </body>

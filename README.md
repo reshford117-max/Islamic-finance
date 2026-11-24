@@ -3,7 +3,8 @@
 | Manzil | Nima |
 |---|---|
 | `/` | Mizon sayti (o‘zgarmagan) |
-| `/admin` | Admin panel — YouTube videolarini qo‘shish, tahrirlash, o‘chirish, tartiblash |
+| `/admin` | Admin kirish sahifasi (parol) |
+| `/admin/panel` | Admin panel — YouTube videolarini qo‘shish, tahrirlash, o‘chirish, tartiblash |
 | `/api/videos` | Videolar ro‘yxati (ilova shu yerdan oladi) |
 | `/app/mizon-videos.js` | Ilovaga ulanadigan video moduli |
 
