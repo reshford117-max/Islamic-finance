@@ -1,4 +1,4 @@
-# Mizon — sayt, admin panel va videolar
+# Islom moliyasi — sayt, admin panel va videolar
 
 | Manzil | Nima |
 |---|---|
